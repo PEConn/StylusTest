@@ -1,6 +1,7 @@
 package dev.conn.stylustest;
 
 import android.os.Build.VERSION;
+import android.util.Log;
 import android.view.ViewTreeObserver;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.inputmethod.InputMethodManager;
@@ -14,6 +15,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d("Peter", "onCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -26,7 +28,8 @@ public class MainActivity extends AppCompatActivity {
         Button button = findViewById(R.id.button);
 
         DrawView drawView = findViewById(R.id.drawView);
-        drawView.getViewTreeObserver().addOnGlobalLayoutListener(new OnGlobalLayoutListener() {
+        drawView.getViewTreeObserver()
+                .addOnGlobalLayoutListener(new OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
                 drawView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
@@ -36,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-
+        // drawView.requestFocus();
 
         if (isOnT) {
             // editText.setAutoHandwritingEnabled(false);
@@ -51,6 +54,9 @@ public class MainActivity extends AppCompatActivity {
             drawView.setStartHandwritingCallback(() -> {
                 InputMethodManager manager = (InputMethodManager)
                         getSystemService(INPUT_METHOD_SERVICE);
+
+                drawView.requestFocus();
+                // manager.showSoftInput(drawView, 0);
 
                 manager.startStylusHandwriting(drawView);
             });

@@ -6,12 +6,14 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+import androidx.annotation.Nullable;
 import java.util.ArrayList;
 
 public class DrawView extends View {
@@ -42,6 +44,9 @@ public class DrawView extends View {
 
     public DrawView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        setFocusable(true);
+        setFocusableInTouchMode(true);
+
         mPaint = new Paint();
 
         // the below methods smoothens
@@ -55,7 +60,6 @@ public class DrawView extends View {
 
         // 0xff=255 in decimal
         mPaint.setAlpha(0xff);
-
     }
 
     public void setStartHandwritingCallback(Runnable callback) {
@@ -163,6 +167,10 @@ public class DrawView extends View {
         float dx = Math.abs(x - mX);
         float dy = Math.abs(y - mY);
 
+        if (mX > mBitmap.getWidth() / 2 && mCallback != null) {
+            mCallback.run();
+        }
+
         if (dx >= TOUCH_TOLERANCE || dy >= TOUCH_TOLERANCE) {
             mPath.quadTo(mX, mY, (x + mX) / 2, (y + mY) / 2);
             mX = x;
@@ -175,10 +183,6 @@ public class DrawView extends View {
     // the end position
     private void touchUp() {
         mPath.lineTo(mX, mY);
-
-        if (mX > mBitmap.getWidth() / 2 && mCallback != null) {
-            mCallback.run();
-        }
     }
 
     // the onTouchEvent() method provides us with
@@ -192,6 +196,7 @@ public class DrawView extends View {
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
+                // requestFocus();
                 touchStart(x, y);
                 invalidate();
                 break;
@@ -204,7 +209,9 @@ public class DrawView extends View {
                 invalidate();
                 break;
             case MotionEvent.ACTION_CANCEL:
-                paths.clear();
+                if (paths.size() > 0) {
+                    paths.get(paths.size() - 1).color = Color.BLUE;
+                }
                 invalidate();
                 break;
         }
@@ -213,13 +220,27 @@ public class DrawView extends View {
 
     @Override
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
-        Log.d("Peter", "onCreateInputConnection");
+        Log.w("Peter", "onCreateInputConnection");
         return super.onCreateInputConnection(outAttrs);
     }
 
     @Override
-    public boolean checkInputConnectionProxy(View view) {
-        Log.d("Peter", "checkInputConnectionProxy");
+    public boolean onCheckIsTextEditor() {
+        Log.w("Peter", "onCheckIsTextEditor");
         return true;
     }
+
+    @Override
+    protected void onFocusChanged(boolean gainFocus, int direction,
+            @Nullable Rect previouslyFocusedRect) {
+        Log.d("Peter", "onFocusChanged(" + gainFocus + ")");
+        super.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasWindowFocus) {
+        Log.d("Peter", "onWindowFocusChanged(" + hasWindowFocus + ")");
+        super.onWindowFocusChanged(hasWindowFocus);
+    }
+
 }
