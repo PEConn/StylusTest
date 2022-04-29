@@ -46,6 +46,8 @@ public class DrawView extends View {
         setFocusable(true);
         setFocusableInTouchMode(true);
 
+        setAutoHandwritingEnabled(false);
+
         mPaint = new Paint();
 
         mPaint.setAntiAlias(true);
