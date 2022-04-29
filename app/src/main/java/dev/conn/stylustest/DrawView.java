@@ -60,7 +60,7 @@ public class DrawView extends View {
         mPaint.setAlpha(0xff);
     }
 
-    public void init(int height, int width, Logger logger) {
+    public void init(int width, int height, Logger logger) {
         mLogger = logger;
         mInputConnection = new DrawViewInputConnection(this, mLogger, this::invalidate);
         mBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
