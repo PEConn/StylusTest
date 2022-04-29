@@ -5,8 +5,8 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -27,14 +27,16 @@ public class DrawView extends View {
     private final ArrayList<Stroke> paths = new ArrayList<>();
     private Bitmap mBitmap;
     private Canvas mCanvas;
+    private OngoingStroke mOngoingStroke;
+
 
     private final Paint mBitmapPaint = new Paint(Paint.DITHER_FLAG);
     private Logger mLogger;
 
-    private Box mTextBoxBounds;
-    private OngoingStroke mOngoingStroke;
+    private TextBox mTextBox;
 
-    // Constructors to initialise all the attributes
+    private DrawViewInputConnection mInputConnection;
+
     public DrawView(Context context) {
         this(context, null);
     }
@@ -46,8 +48,6 @@ public class DrawView extends View {
 
         mPaint = new Paint();
 
-        // the below methods smoothens
-        // the drawings of the user
         mPaint.setAntiAlias(true);
         mPaint.setDither(true);
         mPaint.setColor(Color.GREEN);
@@ -55,19 +55,22 @@ public class DrawView extends View {
         mPaint.setStrokeJoin(Paint.Join.ROUND);
         mPaint.setStrokeCap(Paint.Cap.ROUND);
 
-        // 0xff=255 in decimal
+        mPaint.setTextSize(60.0f);
+
         mPaint.setAlpha(0xff);
     }
 
-    public void init(int height, int width) {
+    public void init(int height, int width, Logger logger) {
+        mLogger = logger;
+        mInputConnection = new DrawViewInputConnection(this, mLogger, this::invalidate);
         mBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         mCanvas = new Canvas(mBitmap);
 
         int quarterWidth = width / 4;
         int quarterHeight = height / 4;
-        mTextBoxBounds = new Box(quarterWidth, quarterHeight,
+        mTextBox = new TextBox(quarterWidth, quarterHeight,
                 quarterWidth * 3, quarterHeight + 80);
-        paths.add(new Stroke(Color.RED, 4, mTextBoxBounds.getOutline()));
+        paths.add(new Stroke(Color.RED, 4, mTextBox.getOutline()));
     }
 
     @Override
@@ -76,6 +79,9 @@ public class DrawView extends View {
 
         int backgroundColor = Color.rgb(200, 200, 200);
         mCanvas.drawColor(backgroundColor);
+
+        RectF textPos = mTextBox.toRectF();
+        mCanvas.drawText(mInputConnection.getText(), textPos.left + 10, textPos.bottom - 15, mPaint);
 
         for (Stroke fp : paths) {
             mPaint.setColor(fp.color);
@@ -87,7 +93,7 @@ public class DrawView extends View {
     }
 
     private void touchStart(float x, float y) {
-        if (mTextBoxBounds.contains((int) x, (int) y)) {
+        if (mTextBox.contains((int) x, (int) y)) {
             mOngoingStroke = new OngoingHandwritingStroke(x, y, this::triggerHandwriting);
         } else {
             mOngoingStroke = new OngoingStroke(x, y);
@@ -99,14 +105,14 @@ public class DrawView extends View {
     private void triggerHandwriting() {
         InputMethodManager manager = getContext().getSystemService(InputMethodManager.class);
 
-        mLogger.log("Triggering handwriting");
+        mLogger.log("Triggering handwriting, setting editor bounds to " + mTextBox.toRectF().toShortString());
 
         requestFocus();
         manager.startStylusHandwriting(this);
 
         CursorAnchorInfo info = new CursorAnchorInfo.Builder()
                 .setEditorBoundsInfo(new EditorBoundsInfo.Builder()
-                        .setHandwritingBounds(mTextBoxBounds.toRectF())
+                        .setHandwritingBounds(mTextBox.toRectF())
                         .build()
                 )
                 .build();
@@ -155,7 +161,7 @@ public class DrawView extends View {
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
         mLogger.log("onCreateInputConnection");
 
-        return new DrawViewInputConnection(this, mLogger);
+        return mInputConnection;
     }
 
     @Override
@@ -175,9 +181,5 @@ public class DrawView extends View {
     public void onWindowFocusChanged(boolean hasWindowFocus) {
         Log.d("Peter", "onWindowFocusChanged(" + hasWindowFocus + ")");
         super.onWindowFocusChanged(hasWindowFocus);
-    }
-
-    public void setLogger(Logger logger) {
-        mLogger = logger;
     }
 }

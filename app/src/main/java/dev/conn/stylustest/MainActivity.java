@@ -13,29 +13,28 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 
 public class MainActivity extends AppCompatActivity {
-
     public interface Logger {
         void log(String line);
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.d("Peter", "onCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         TextView logView = findViewById(R.id.logView);
         logView.setMovementMethod(new ScrollingMovementMethod());
-        boolean isOnT = VERSION.SDK_INT > 33 ||
-                VERSION.SDK_INT == 32 && VERSION.CODENAME.toLowerCase().equals("tiramisu");
-        logView.setText("SDK_INT = " + VERSION.SDK_INT + ", SDK_NAME = " + VERSION.CODENAME);
         Logger logger = line -> {
             Log.d("Peter", line);
             logView.append('\n' + line);
         };
 
-        EditText editText = findViewById(R.id.editText);
-        Button button = findViewById(R.id.button);
+        boolean isOnT = VERSION.SDK_INT > 33 ||
+                VERSION.SDK_INT == 32 && VERSION.CODENAME.toLowerCase().equals("tiramisu");
+        logger.log("SDK_INT = " + VERSION.SDK_INT + ", SDK_NAME = " + VERSION.CODENAME);
+        logger.log("You can draw by scribbling in the box above.");
+        logger.log("If you start a stroke in the red box, #startStylusHandwriting will be called.");
+        logger.log("If a stroke gets cancelled, it turns grey.");
 
         DrawView drawView = findViewById(R.id.drawView);
         drawView.getViewTreeObserver()
@@ -43,23 +42,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onGlobalLayout() {
                 drawView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                int width = drawView.getMeasuredWidth();
-                int height = drawView.getMeasuredHeight();
-                drawView.init(height, width);
+                drawView.init(drawView.getMeasuredWidth(), drawView.getMeasuredHeight(), logger);
             }
         });
-
-        drawView.setLogger(logger);
-
-        if (isOnT) {
-            // editText.setAutoHandwritingEnabled(false);
-            button.setOnClickListener(view -> {
-                InputMethodManager manager = (InputMethodManager)
-                        view.getContext().getSystemService(INPUT_METHOD_SERVICE);
-
-                editText.requestFocus();
-                manager.startStylusHandwriting(editText);
-            });
-        }
     }
 }

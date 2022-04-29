@@ -6,7 +6,7 @@ public class OngoingHandwritingStroke extends OngoingStroke {
 
     public OngoingHandwritingStroke(float x, float y, Runnable startHandwriting) {
         super(x, y);
-        this.mStartHandwriting = startHandwriting;
+        mStartHandwriting = startHandwriting;
     }
 
     @Override

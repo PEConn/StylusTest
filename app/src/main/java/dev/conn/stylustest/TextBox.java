@@ -4,10 +4,10 @@ import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
 
-public class Box {
+public class TextBox {
     private final Rect mBounds;
 
-    public Box(int left, int top, int right, int bottom) {
+    public TextBox(int left, int top, int right, int bottom) {
         mBounds = new Rect(left, top, right, bottom);
     }
 
