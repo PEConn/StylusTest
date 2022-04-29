@@ -1,6 +1,7 @@
 package dev.conn.stylustest;
 
 import android.os.Build.VERSION;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.ViewTreeObserver;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
@@ -13,16 +14,25 @@ import android.os.Bundle;
 
 public class MainActivity extends AppCompatActivity {
 
+    public interface Logger {
+        void log(String line);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.d("Peter", "onCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        TextView textView = findViewById(R.id.textView);
+        TextView logView = findViewById(R.id.logView);
+        logView.setMovementMethod(new ScrollingMovementMethod());
         boolean isOnT = VERSION.SDK_INT > 33 ||
                 VERSION.SDK_INT == 32 && VERSION.CODENAME.toLowerCase().equals("tiramisu");
-        textView.setText("SDK_INT = " + VERSION.SDK_INT + ", SDK_NAME = " + VERSION.CODENAME);
+        logView.setText("SDK_INT = " + VERSION.SDK_INT + ", SDK_NAME = " + VERSION.CODENAME);
+        Logger logger = line -> {
+            Log.d("Peter", line);
+            logView.append('\n' + line);
+        };
 
         EditText editText = findViewById(R.id.editText);
         Button button = findViewById(R.id.button);
@@ -39,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // drawView.requestFocus();
+        drawView.setLogger(logger);
 
         if (isOnT) {
             // editText.setAutoHandwritingEnabled(false);
@@ -49,16 +59,6 @@ public class MainActivity extends AppCompatActivity {
 
                 editText.requestFocus();
                 manager.startStylusHandwriting(editText);
-            });
-
-            drawView.setStartHandwritingCallback(() -> {
-                InputMethodManager manager = (InputMethodManager)
-                        getSystemService(INPUT_METHOD_SERVICE);
-
-                drawView.requestFocus();
-                // manager.showSoftInput(drawView, 0);
-
-                manager.startStylusHandwriting(drawView);
             });
         }
     }

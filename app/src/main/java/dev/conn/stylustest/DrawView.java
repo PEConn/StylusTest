@@ -11,31 +11,28 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.CursorAnchorInfo;
+import android.view.inputmethod.EditorBoundsInfo;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+import android.view.inputmethod.InputMethodManager;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import dev.conn.stylustest.MainActivity.Logger;
 import java.util.ArrayList;
 
+@RequiresApi(api = 33)
 public class DrawView extends View {
-
-    private static final float TOUCH_TOLERANCE = 4;
-    private float mX, mY;
-    private Path mPath;
-
-    // the Paint class encapsulates the color
-    // and style information about
-    // how to draw the geometries,text and bitmaps
-    private Paint mPaint;
-
-    // ArrayList to store all the strokes
-    // drawn by the user on the Canvas
-    private ArrayList<Stroke> paths = new ArrayList<>();
-    private int currentColor;
-    private int strokeWidth;
+    private final Paint mPaint;
+    private final ArrayList<Stroke> paths = new ArrayList<>();
     private Bitmap mBitmap;
     private Canvas mCanvas;
-    private Paint mBitmapPaint = new Paint(Paint.DITHER_FLAG);
-    private Runnable mCallback;
+
+    private final Paint mBitmapPaint = new Paint(Paint.DITHER_FLAG);
+    private Logger mLogger;
+
+    private Box mTextBoxBounds;
+    private OngoingStroke mOngoingStroke;
 
     // Constructors to initialise all the attributes
     public DrawView(Context context) {
@@ -62,66 +59,24 @@ public class DrawView extends View {
         mPaint.setAlpha(0xff);
     }
 
-    public void setStartHandwritingCallback(Runnable callback) {
-        mCallback = callback;
-    }
-
-    // this method instantiate the bitmap and object
     public void init(int height, int width) {
         mBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         mCanvas = new Canvas(mBitmap);
 
-        // set an initial color of the brush
-        currentColor = Color.YELLOW;
-
-        // set an initial brush size
-        strokeWidth = 20;
-
-        int middle = width / 2;
-        Path divider = new Path();
-        divider.moveTo(middle, 0);
-        divider.lineTo(middle, height);
-        paths.add(new Stroke(Color.RED, 10, divider));
+        int quarterWidth = width / 4;
+        int quarterHeight = height / 4;
+        mTextBoxBounds = new Box(quarterWidth, quarterHeight,
+                quarterWidth * 3, quarterHeight + 80);
+        paths.add(new Stroke(Color.RED, 4, mTextBoxBounds.getOutline()));
     }
 
-    // sets the current color of stroke
-    public void setColor(int color) {
-        currentColor = color;
-    }
-
-    // sets the stroke width
-    public void setStrokeWidth(int width) {
-        strokeWidth = width;
-    }
-
-    public void undo() {
-        // check whether the List is empty or not
-        // if empty, the remove method will return an error
-        if (paths.size() != 0) {
-            paths.remove(paths.size() - 1);
-            invalidate();
-        }
-    }
-
-    // this methods returns the current bitmap
-    public Bitmap save() {
-        return mBitmap;
-    }
-
-    // this is the main method where
-    // the actual drawing takes place
     @Override
     protected void onDraw(Canvas canvas) {
-        // save the current state of the canvas before,
-        // to draw the background of the canvas
         canvas.save();
 
-        // DEFAULT color of the canvas
-        int backgroundColor = Color.WHITE;
+        int backgroundColor = Color.rgb(200, 200, 200);
         mCanvas.drawColor(backgroundColor);
 
-        // now, we iterate over the list of paths
-        // and draw each path on the canvas
         for (Stroke fp : paths) {
             mPaint.setColor(fp.color);
             mPaint.setStrokeWidth(fp.strokeWidth);
@@ -131,64 +86,42 @@ public class DrawView extends View {
         canvas.restore();
     }
 
-    // the below methods manages the touch
-    // response of the user on the screen
-
-    // firstly, we create a new Stroke
-    // and add it to the paths list
     private void touchStart(float x, float y) {
-        mPath = new Path();
-        Stroke fp = new Stroke(currentColor, strokeWidth, mPath);
-        paths.add(fp);
+        if (mTextBoxBounds.contains((int) x, (int) y)) {
+            mOngoingStroke = new OngoingHandwritingStroke(x, y, this::triggerHandwriting);
+        } else {
+            mOngoingStroke = new OngoingStroke(x, y);
+        }
 
-        // finally remove any curve
-        // or line from the path
-        mPath.reset();
-
-        // this methods sets the starting
-        // point of the line being drawn
-        mPath.moveTo(x, y);
-
-        // we save the current
-        // coordinates of the finger
-        mX = x;
-        mY = y;
+        paths.add(mOngoingStroke.getStroke());
     }
 
-    // in this method we check
-    // if the move of finger on the
-    // screen is greater than the
-    // Tolerance we have previously defined,
-    // then we call the quadTo() method which
-    // actually smooths the turns we create,
-    // by calculating the mean position between
-    // the previous position and current position
+    private void triggerHandwriting() {
+        InputMethodManager manager = getContext().getSystemService(InputMethodManager.class);
+
+        mLogger.log("Triggering handwriting");
+
+        requestFocus();
+        manager.startStylusHandwriting(this);
+
+        CursorAnchorInfo info = new CursorAnchorInfo.Builder()
+                .setEditorBoundsInfo(new EditorBoundsInfo.Builder()
+                        .setHandwritingBounds(mTextBoxBounds.toRectF())
+                        .build()
+                )
+                .build();
+        manager.updateCursorAnchorInfo(this, info);
+    }
+
     private void touchMove(float x, float y) {
-        float dx = Math.abs(x - mX);
-        float dy = Math.abs(y - mY);
-
-        if (mX > mBitmap.getWidth() / 2 && mCallback != null) {
-            mCallback.run();
-        }
-
-        if (dx >= TOUCH_TOLERANCE || dy >= TOUCH_TOLERANCE) {
-            mPath.quadTo(mX, mY, (x + mX) / 2, (y + mY) / 2);
-            mX = x;
-            mY = y;
-        }
+        mOngoingStroke.move(x, y);
     }
 
-    // at the end, we call the lineTo method
-    // which simply draws the line until
-    // the end position
     private void touchUp() {
-        mPath.lineTo(mX, mY);
+        mOngoingStroke.finish();
+        mOngoingStroke = null;
     }
 
-    // the onTouchEvent() method provides us with
-    // the information about the type of motion
-    // which has been taken place, and according
-    // to that we call our desired methods
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         float x = event.getX();
@@ -196,7 +129,7 @@ public class DrawView extends View {
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                // requestFocus();
+                mLogger.log("ACTION_DOWN");
                 touchStart(x, y);
                 invalidate();
                 break;
@@ -205,13 +138,13 @@ public class DrawView extends View {
                 invalidate();
                 break;
             case MotionEvent.ACTION_UP:
+                mLogger.log("ACTION_UP");
                 touchUp();
                 invalidate();
                 break;
             case MotionEvent.ACTION_CANCEL:
-                if (paths.size() > 0) {
-                    paths.get(paths.size() - 1).color = Color.BLUE;
-                }
+                mLogger.log("ACTION_CANCEL");
+                mOngoingStroke.cancel();
                 invalidate();
                 break;
         }
@@ -220,8 +153,9 @@ public class DrawView extends View {
 
     @Override
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
-        Log.w("Peter", "onCreateInputConnection");
-        return super.onCreateInputConnection(outAttrs);
+        mLogger.log("onCreateInputConnection");
+
+        return new DrawViewInputConnection(this, mLogger);
     }
 
     @Override
@@ -243,4 +177,7 @@ public class DrawView extends View {
         super.onWindowFocusChanged(hasWindowFocus);
     }
 
+    public void setLogger(Logger logger) {
+        mLogger = logger;
+    }
 }

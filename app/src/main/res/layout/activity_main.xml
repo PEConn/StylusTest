@@ -6,23 +6,6 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-  <dev.conn.stylustest.DrawView
-      android:layout_width="match_parent"
-      android:layout_height="400dp"
-      android:id="@+id/drawView"
-      app:layout_constraintLeft_toLeftOf="parent"
-      app:layout_constraintRight_toRightOf="parent"
-      app:layout_constraintTop_toTopOf="parent" />
-
-  <TextView
-      android:id="@+id/textView"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:text="Hello World!"
-      app:layout_constraintBottom_toBottomOf="parent"
-      app:layout_constraintLeft_toLeftOf="parent"
-      app:layout_constraintRight_toRightOf="parent"
-      app:layout_constraintTop_toTopOf="parent" />
   <Button
       android:id="@+id/button"
       android:layout_width="wrap_content"
@@ -40,9 +23,38 @@
       android:layout_marginBottom="24dp"
       android:ems="10"
       android:inputType="textPersonName"
-      android:text="Name"
       app:layout_constraintBottom_toTopOf="@+id/button"
       app:layout_constraintEnd_toEndOf="parent"
       app:layout_constraintStart_toStartOf="parent" />
+
+  <TextView
+      android:id="@+id/logView"
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_margin="24dp"
+      android:background="#444444"
+      android:scrollbars="vertical"
+      android:textColor="@color/white"
+      app:layout_constraintBottom_toTopOf="@+id/editText"
+      app:layout_constraintLeft_toLeftOf="parent"
+      app:layout_constraintRight_toRightOf="parent"
+      app:layout_constraintTop_toBottomOf="@+id/guideline" />
+
+  <androidx.constraintlayout.widget.Guideline
+      android:id="@+id/guideline"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:orientation="horizontal"
+      app:layout_constraintGuide_percent="0.5" />
+
+  <dev.conn.stylustest.DrawView
+      android:id="@+id/drawView"
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      app:layout_constraintBottom_toTopOf="@+id/guideline"
+      app:layout_constraintHorizontal_bias="1.0"
+      app:layout_constraintLeft_toLeftOf="parent"
+      app:layout_constraintRight_toRightOf="parent"
+      app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
